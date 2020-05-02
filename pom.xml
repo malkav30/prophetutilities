@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.phi</groupId>
-  <artifactId>prophetutils</artifactId>
+  <artifactId>prophetutilities</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>Prophet Utils</name>
   <description>the Prophet's best friend</description>
@@ -14,7 +14,7 @@
     <repository>
     <id>github</id>
     <name>GitHub Packages</name>
-    <url>https://maven.pkg.github.com/malkav30/prophetutils</url>
+    <url>https://maven.pkg.github.com/malkav30/prophetutilities</url>
     </repository>
 </distributionManagement>
   <dependencies>
