@@ -272,6 +272,7 @@ public class DSISysexLoader {
 			System.exit(-1);
 		}
 		try {
+			// Under the hood, this is FileSystems.getDefault().getPath()
 			URI patchPath = Paths.get("",args).toAbsolutePath().normalize().toUri();
 			ByteBuffer patch = DSISysexLoader.loadSysexFile(patchPath);
 			System.out.println("Patch name is "+DSISysexLoader.getFullName(patch));

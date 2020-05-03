@@ -3,22 +3,20 @@
  */
 package com.phi.prophetlibrarian;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * @author A501341
+ * @author Philippe Duval
  *
  */
 public class DSISysexLoaderTest {
@@ -28,9 +26,6 @@ public class DSISysexLoaderTest {
 		ClassLoader classLoader = this.getClass().getClassLoader();
 		URI uri = classLoader.getResource(name).toURI();
 		System.out.println("Loading file: " + uri);
-
-		// Path currentDir = Paths.get(".");
-		// System.out.println(currentDir.toAbsolutePath());
 		return uri;
 	}
 
@@ -43,9 +38,8 @@ public class DSISysexLoaderTest {
 		// WHEN
 		ByteBuffer result = DSISysexLoader.loadSysexFile(uri);
 		// THEN
-		// System.out.println(DSISysexLoader.formatSysex(DSISysexLoader.toHex(result)));
-		Assertions.assertTrue(result.hasArray()); // our buffer is not empty
-		Assertions.assertTrue((result.get(0) & 0xFF) == 0xF0); // it begins with F0
+		assertThat(result.hasArray()).isEqualTo(true);
+		assertThat((result.get(0) & 0xFF)).isEqualTo(0xF0);
 	}
 
 	// output the patch number in litteral form
@@ -62,22 +56,10 @@ public class DSISysexLoaderTest {
 
 		// WHEN we try to get the position of a sysex file
 		String result = DSISysexLoader.getPosition(patch);
-		// System.out.println(result);
 		// THEN whe should print the position of the patch
-		Assertions.assertEquals(result, position);
+		//Assertions.assertEquals(result, position);
+		assertThat(result).isEqualTo(position);
 	}
-	/*@Test
-	public void should_return_position() throws Exception {
-		// GIVEN a loader, and some variables
-		URL url = getFileURL("B2 P55 Alpha Lead.syx");
-		ByteBuffer patch = DSISysexLoader.loadSysexFile(url);
-
-		// WHEN we try to get the position of a sysex file
-		String result = DSISysexLoader.getPosition(patch);
-		System.out.println(result);
-		// THEN whe should print the position of the patch
-		Assertions.assertEquals(result, "B55");
-	}*/
 
 	// load a sysex file with several banks, havig e.g. Wagnerian in
 	// A1, and Percy in B96 (not tested)
@@ -88,8 +70,7 @@ public class DSISysexLoaderTest {
 		// WHEN
 		ByteBuffer result = DSISysexLoader.loadSysexFile(uri);
 		// THEN
-		// System.out.println(DSISysexLoader.formatSysex(DSISysexLoader.toHex(result)));
-		Assertions.assertTrue(result.hasArray());
+		assertThat(result.hasArray()).isEqualTo(true);
 	}
 
 	// convert byte into readable hex
@@ -98,52 +79,43 @@ public class DSISysexLoaderTest {
 		// GIVEN
 		byte[] bytes = { 10, 2, 15, 11 };
 		ByteBuffer sysex = ByteBuffer.wrap(bytes);
-		// System.out.println(sysex);
 		// WHEN
 		String result = DSISysexLoader.toHex(sysex);
 		// THEN
-		// System.out.println(DSISysexLoader.formatSysex(result));
-		Assertions.assertTrue("0A020F0B".equals(result));
+		assertThat(result).isEqualTo("0A020F0B");
 	}
 
 	// get the patch name (not trimmed)
-	@Test
-	public void should_return_patch_name_strange_bass() throws Exception {
+	@ParameterizedTest
+	@CsvSource({
+		"B2_P01_Strange_Bass.syx,'Strange Bass JR '",
+		"B2 P55 Alpha Lead.syx,'Alpha Lead JR   '"
+	})
+	public void should_return_patch_name_p08(String file, String name) throws Exception {
 		// GIVEN
-		URI uri = getFileURI("B2_P01_Strange_Bass.syx");
+		URI uri = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
-
 		// WHEN
 		String result = DSISysexLoader.getP08Name(patch);
 		// THEN
-		assertTrue("Strange Bass JR ".equals(result));
-	}
-
-	// get the patch name (not trimmed)
-	@Test
-	public void should_return_patch_name_alpha_lead() throws Exception {
-		// GIVEN
-		URI uri = getFileURI("B2 P55 Alpha Lead.syx");
-		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
-
-		// WHEN
-		String result = DSISysexLoader.getP08Name(patch);
-		// THEN
-		assertTrue("Alpha Lead JR   ".equals(result));
+		assertThat(result).isEqualTo(name);
 	}
 
 	// get the patch name (not trimmed) for a rev2 patch
-	@Test
-	public void should_return_patch_name_rev2() throws Exception {
+	@ParameterizedTest
+	@CsvSource({
+		"Stranger_Things.syx,'StrangerThings      '"
+	})
+	public void should_return_patch_name_rev2(String file, String name) throws Exception {
 		// GIVEN 
-		URI uri = getFileURI("Stranger_Things.syx");
+		URI uri = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
 
 		// WHEN
 		String result = DSISysexLoader.getREV2Name(patch);
 		// System.out.println(result);
 		// THEN
-		assertTrue("StrangerThings      ".equals(result));
+		assertThat(result).isEqualTo(name);
 	}
 
 	// ensure that we dont load garbage files not being sysex
@@ -153,7 +125,7 @@ public class DSISysexLoaderTest {
 		byte[] bytes = { 10, 2, 15, 11 };
 		ByteBuffer wrongFile = ByteBuffer.wrap(bytes);
 		// WHEN / THEN
-		assertFalse(DSISysexLoader.isSysexFile(wrongFile));
+		assertThat(DSISysexLoader.isSysexFile(wrongFile)).isFalse();
 
 	}
 
@@ -164,18 +136,23 @@ public class DSISysexLoaderTest {
 		URI uri = getFileURI("B2_P01_Strange_Bass.syx");
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
 		// THEN
-		assertTrue(DSISysexLoader.isSysexFile(patch));
+		assertThat(DSISysexLoader.isSysexFile(patch)).isTrue();
 
 	}
 
 	// get the prophet revision
-	@Test
-	public void should_identify_synth() throws Exception {
+	@ParameterizedTest
+	@CsvSource({
+		"B2_P01_Strange_Bass.syx,Prophet '08",
+		"B2 P55 Alpha Lead.syx,Prophet '08",
+		"Stranger_Things.syx,Prophet REV2"
+	})
+	public void should_identify_synth(String file, String synth) throws Exception {
 		// GIVEN
-		URI url = getFileURI("B2_P01_Strange_Bass.syx");
+		URI url = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(url);
 		// WHEN/THEN
-		assertTrue("Prophet '08".equals(DSISysexLoader.getSynthModel(patch)));
+		assertThat(synth.equals(DSISysexLoader.getSynthModel(patch))).isTrue();
 	}
 
 	// validate that this is a patch sysex, and not some other sysex file
@@ -185,23 +162,18 @@ public class DSISysexLoaderTest {
 		URI uri = getFileURI("B2_P01_Strange_Bass.syx");
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
 		// WHEN/THEN
-		assertTrue((DSISysexLoader.isPatchData(patch)));
+		assertThat((DSISysexLoader.isPatchData(patch))).isTrue();
 	}
 
 	// ensure that we don't load garbage binary files
 	@Test
-	@SuppressWarnings("unused")
 	public void should_not_load_illegal_files() throws URISyntaxException {
 		// GIVEN
 		URI uri = getFileURI("foo.syx");
 		// WHEN
-		try {
-			ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
-			fail();
-		} catch (Exception e) {
-			// THEN
-			assertTrue(e instanceof IllegalArgumentException);
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
+											DSISysexLoader.loadSysexFile(uri));
+		
 	}
 
 	// ability to decode MSB encoded binary data
@@ -236,7 +208,7 @@ public class DSISysexLoaderTest {
 
 		ByteBuffer unpacked = DSISysexLoader.unpackData(ByteBuffer.wrap(packedBytes));
 		for (int i = 0; i < 7; i++) {
-			assertEquals(unpacked.get(i), unpackedBytes[i]);
+			assertThat(unpacked.get(i)).isEqualTo(unpackedBytes[i]);
 		}
 	}
 
@@ -273,7 +245,7 @@ public class DSISysexLoaderTest {
 
 		ByteBuffer unpacked = DSISysexLoader.unpackData(ByteBuffer.wrap(packedBytes));
 		for (int i = 0; i < 7; i++) {
-			assertEquals(unpackedBytes[i], unpacked.get(i));
+			assertThat(unpackedBytes[i]).isEqualTo(unpacked.get(i));
 		}
 	}
 
@@ -284,14 +256,8 @@ public class DSISysexLoaderTest {
 		byte[] bytes = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 		ByteBuffer illegalChunk = ByteBuffer.wrap(bytes);
 		// WHEN
-		try {
-			DSISysexLoader.unpackData(illegalChunk);
-			fail();
-		}
-		// THEN
-		catch (Exception e) {
-			assertTrue(e instanceof IllegalArgumentException);
-		}
+		// THEN JUnit5 Style
+		assertThrows(IllegalArgumentException.class, () -> DSISysexLoader.unpackData(illegalChunk));
 	}
 
 	// validate that we don't try to decode a chunk that is smaller than 8 bytes
@@ -301,49 +267,24 @@ public class DSISysexLoaderTest {
 		byte[] bytes = { 0, 1, 2 };
 		ByteBuffer illegalChunk = ByteBuffer.wrap(bytes);
 		// WHEN
-		try {
-			DSISysexLoader.unpackData(illegalChunk);
-			fail();
-		}
-		// THEN
-		catch (Exception e) {
-			assertTrue(e instanceof IllegalArgumentException);
-		}
+		// THEN AssertJ Style
+		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.unpackData(illegalChunk));
 	}
 
 	// finally, validate that we can have the full name, trimmed, including bank/patch number (what we are looking for :) )
-	@Test
-	public void should_return_full_patch_name_bass() throws Exception {
+	@ParameterizedTest
+	@CsvSource({
+		"B2_P01_Strange_Bass.syx,B001 - Strange Bass JR",
+		"B2 P55 Alpha Lead.syx,B055 - Alpha Lead JR",
+		"Stranger_Things.syx,B108 - StrangerThings"
+	})
+	public void should_return_full_patch_name_bass(String file, String name) throws Exception {
 		//GIVEN a P'08 file
-		URI uri = getFileURI("B2_P01_Strange_Bass.syx");
+		URI uri = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
 		//WHEN we call the method
 		String fullName = DSISysexLoader.getFullName(patch);
 		//THEN it should return the vull patch name and position
-		assertTrue("B001 - Strange Bass JR".equals(fullName));
-	}
-
-	// finally, validate that we can have the full name, trimmed, including bank/patch number (what we are looking for :) )
-	@Test
-	public void should_return_full_patch_name_lead() throws Exception {
-		//GIVEN a P'08 file
-		URI uri = getFileURI("B2 P55 Alpha Lead.syx");
-		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
-		//WHEN we call the method
-		String fullName = DSISysexLoader.getFullName(patch);
-		//THEN it should return the vull patch name and position
-		assertEquals(fullName,"B055 - Alpha Lead JR"); //0x01 0x36
-	}
-
-	// finally, validate that we can have the full name, trimmed, including bank/patch number (what we are looking for :) )
-	@Test
-	public void should_return_full_patch_name_rev2() throws Exception {
-		//GIVEN a REV2 file
-		URI uri = getFileURI("Stranger_Things.syx");
-		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
-		//WHEN we call the method
-		String fullName = DSISysexLoader.getFullName(patch);
-		//THEN it should return the vull patch name and position
-		assertEquals(fullName,"B108 - StrangerThings"); //01 6B
+		assertThat(name.equals(fullName)).isTrue();
 	}
 }
