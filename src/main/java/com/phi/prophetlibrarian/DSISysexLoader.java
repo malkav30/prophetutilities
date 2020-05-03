@@ -4,11 +4,10 @@
 package com.phi.prophetlibrarian;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -27,7 +26,7 @@ public class DSISysexLoader {
 	private static final short SYSTEM_EXCLUSIVE = 0xF0;
 	private static final short EOX = 0xF7;
 	private static final short PROGRAM_DATA = 0b0010;
-	private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
+	private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
 	private static final int REV2_PROGRAM_SIZE = 1171; // number of bytes used to describe a program in raw sysex file
 	private static final int REV2_DECODED_PROGRAM_SIZE = 1024;
 	private static final int REV2_NAME_SIZE = 20;
@@ -55,7 +54,7 @@ public class DSISysexLoader {
 		synthsModels = Collections.unmodifiableMap(anotherMap);
 	}
 
-	public static ByteBuffer loadSysexFile(URI uri) throws URISyntaxException, IOException {
+	public static ByteBuffer loadSysexFile(URI uri) throws IOException {
 		// Load entire file
 		ByteBuffer sysex = ByteBuffer.wrap(Files.readAllBytes(Paths.get(uri)));
 		if (DSISysexLoader.isPatchData(sysex)) {
@@ -83,10 +82,10 @@ public class DSISysexLoader {
 	 */
 	public static String getPosition(ByteBuffer patch) {
 		// Parse patch to get bank (ABCD) and patch number foo
-		int banknumber = Integer.valueOf(patch.get(4));
+		int banknumber = patch.get(4);
 		String banklitteral = synthBank.get(banknumber);
 		// get patchnumber from string
-		int patchnumber = Integer.valueOf(patch.get(5));
+		int patchnumber = patch.get(5);
 		return banklitteral + String.format("%03d", patchnumber + 1);// don't forget that index begins at 1 in the synth
 	}
 
@@ -102,7 +101,7 @@ public class DSISysexLoader {
 		if (!DSISysexLoader.isPatchData(patch)) {
 			throw new IllegalArgumentException("sysex is not a program data");
 		}
-		if (DSISysexLoader.getSynthModel(patch) != MODEL_P08_STRING) {
+		if (!MODEL_P08_STRING.equals(DSISysexLoader.getSynthModel(patch))) {
 			throw new IllegalArgumentException("wrong synth model !!!");
 		}
 		// 1. isolate the program data (index 6 in the sysex payload)
@@ -118,9 +117,6 @@ public class DSISysexLoader {
 		for (int i = 0; i < programData.length - CHUNK_SIZE; i += CHUNK_SIZE) {
 			// FIXME the last chunk is incomplete, adapt the decode method to deal with it !
 			encodedLayer.get(chunk, 0, CHUNK_SIZE); // consume 8 bytes in the buffer --> chunk
-			// System.out.println("loop " + i + " / " + programData.length);
-			// System.out.println(chunk[0] + " " + chunk[1] + " " + chunk[2] + " " + chunk[3] + " " + chunk[4] + " "
-					// + chunk[5] + " " + chunk[6] + " " + chunk[7]);
 			decodedLayer.put(DSISysexLoader.unpackData(ByteBuffer.wrap(chunk)));// pass the chunk as a new Bytebuffer,
 																				// decode it, and append it to the
 																				// decodedlayer
@@ -135,20 +131,14 @@ public class DSISysexLoader {
 		decodedLayer.get(layerName, 0, P08_NAME_SIZE);
 
 		// 4. translate the bytes in string
-		String name = "";
-		try {
-			name = new String(layerName, "US-ASCII");
-		} catch (UnsupportedEncodingException e) {
-			throw new IllegalArgumentException("Wrong encoding for the name (corrupted sysex ?)", e);
-		}
-		return name;
+		return new String(layerName, StandardCharsets.US_ASCII);
 	}
 
 	public static String getREV2Name(ByteBuffer patch) {
 		if (!DSISysexLoader.isPatchData(patch)) {
 			throw new IllegalArgumentException("sysex is not a program data");
 		}
-		if (DSISysexLoader.getSynthModel(patch) != MODEL_REV2_STRING) {
+		if (!MODEL_REV2_STRING.equals(DSISysexLoader.getSynthModel(patch))) {
 			throw new IllegalArgumentException("wrong synth model !!!");
 		}
 
@@ -165,7 +155,6 @@ public class DSISysexLoader {
 		byte[] chunk = new byte[CHUNK_SIZE];
 		for (int i = 0; i < programData.length - CHUNK_SIZE; i += CHUNK_SIZE) {
 			encodedLayer.get(chunk, 0, CHUNK_SIZE); // consume 8 bytes in the buffer --> chunk
-			// System.out.println(chunk[0] + " " + chunk[1] + " " + chunk[2] + " " + chunk[3] + " " + chunk[4]);
 			decodedLayer.put(DSISysexLoader.unpackData(ByteBuffer.wrap(chunk)));// pass the chunk as a new Bytebuffer,
 																				// decode it, and append it to the
 																				// decodedlayer
@@ -178,13 +167,7 @@ public class DSISysexLoader {
 		decodedLayer.get(layerName, 0, REV2_NAME_SIZE);
 
 		// 4. translate the bytes in string
-		String name = "";
-		try {
-			name = new String(layerName, "US-ASCII");
-		} catch (UnsupportedEncodingException e) {
-			throw new IllegalArgumentException("Wrong encoding for the name (corrupted sysex ?)", e);
-		}
-		return name;
+		return new String(layerName, StandardCharsets.US_ASCII);
 	}
 
 	public static boolean isSysexFile(ByteBuffer sysex) {
@@ -228,15 +211,15 @@ public class DSISysexLoader {
 			// try to reconstruct A : A is A7 (LSB of MSB) then 2nd byte
 			// A7 is obtained by msb AND 0b00000001 which is 2^(i-1) (next mask should be 2,
 			// then 4, then 8...)
-			int _A7 = msb & (int) (Math.pow(2, i - 1)); // (2^(i-1))
+			int a7 = msb & (int) (Math.pow(2, i - 1)); // (2^(i-1))
 			// make it rotate to have the MSB right again, the amount of rotation being 8
 			// minus the number of the byte to reconstruct
 			// e.g to reconstruct C the 3rd byte, we will have to shift the MSB 5 times to
 			// the left, thus 8-3
-			_A7 = _A7 << (8 - i);
+			a7 = a7 << (8 - i);
 			// Now we can make a OR to get back our first byte
-			int _A = _A7 | buffer.get(i);
-			unpackedBuffer.put(i - 1, (byte) _A);
+			int a = a7 | buffer.get(i);
+			unpackedBuffer.put(i - 1, (byte) a);
 
 		}
 		return unpackedBuffer;
@@ -244,9 +227,7 @@ public class DSISysexLoader {
 
 	public static String getFullName(ByteBuffer patch) {
 		// get position
-		//System.out.println(DSISysexLoader.toHex(patch));
 		String pos = DSISysexLoader.getPosition(patch);
-		// System.out.println(pos);
 		// get name
 		String name = "";
 		switch (DSISysexLoader.getSynthModel(patch)) {
@@ -261,7 +242,6 @@ public class DSISysexLoader {
 		}
 
 		// concat, trim, return
-		// System.out.println(pos.concat(" - ").concat(name).trim());
 		return pos.concat(" - ").concat(name).trim();
 	}
 
@@ -278,10 +258,6 @@ public class DSISysexLoader {
 			System.out.println("Patch name is "+DSISysexLoader.getFullName(patch));
 		} catch (MalformedURLException e) {
 			System.out.println("Problem locating the indicated file, check your syntax !");
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (URISyntaxException e) {
-			System.out.println("Error parsing the indicated file path, check your syntax !");
 			e.printStackTrace();
 			System.exit(-1);
 		} catch (IOException e) {
