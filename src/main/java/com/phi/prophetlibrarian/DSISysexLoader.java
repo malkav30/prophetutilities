@@ -190,7 +190,14 @@ public class DSISysexLoader {
 	}
 
 	public static String getSynthModel(ByteBuffer sysex) {
-		return synthsModels.get(sysex.get(2) & 0xFF);
+		switch (sysex.get(2) & 0xFF) {
+		case MODEL_P08:
+			return MODEL_P08_STRING;
+		case MODEL_REV2:
+			return MODEL_REV2_STRING;
+		default:
+			throw new IllegalArgumentException("Synth Model Not Supported !");
+		}
 	}
 
 	public static boolean isPatchData(ByteBuffer sysex) {
@@ -302,11 +309,8 @@ public class DSISysexLoader {
 			// otherwise, output the patch name
 				console.info("Patch name is {}",DSISysexLoader.getFullName(sysex));
 			}
-		} catch (MalformedURLException e) {
-			console.error("Problem locating the indicated file, check your syntax !",e);
-			System.exit(-1);
-		} catch (IOException e) {
-			console.error("Unable to read sysex patch; error is:",e);
+		} catch (Exception e) {
+			console.error("Unable to read sysex patch; error is: {}",e.getMessage(),e);
 			System.exit(-1);
 		}
 		System.exit(0);

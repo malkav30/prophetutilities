@@ -123,7 +123,7 @@ public class DSISysexLoaderTest {
 		assertThat(result).isEqualTo(name);
 	}
 
-	// ensure that we dont load garbage files not being sysex
+	// ensure that we don't load garbage files not being sysex
 	@Test
 	public void should_not_validate_notSysex_files() {
 		// GIVEN
@@ -158,6 +158,18 @@ public class DSISysexLoaderTest {
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(url);
 		// WHEN/THEN
 		assertThat(synth.equals(DSISysexLoader.getSynthModel(patch))).isTrue();
+	}
+	
+	@ParameterizedTest
+	@CsvSource({
+	 	"wrongbank.syx"
+	})
+	public void should_throw_exception_when_wrong_synth(String file) throws Exception {
+		// GIVEN
+		URI url = getFileURI(file);
+		ByteBuffer patch = DSISysexLoader.loadSysexFile(url);
+		// WHEN/THEN
+		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.getSynthModel(patch));
 	}
 
 	// validate that this is a patch sysex, and not some other sysex file
@@ -290,6 +302,18 @@ public class DSISysexLoaderTest {
 		List<ByteBuffer> patches = DSISysexLoader.getBankNames(sysex);
 		//WHEN/THEN
 		assertThat(patches).hasSize(patchNumbers);
+	}
+	
+	@ParameterizedTest
+	@CsvSource({
+	 	"wrongbank.syx"
+	})
+	public void should_not_return_patch_list_unsupported_synth(String file) throws Exception {
+		//GIVEN
+		URI uri = getFileURI(file);
+		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
+		//WHEN/THEN
+		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.getBankNames(sysex));
 	}
 	
 	// finally, validate that we can have the full name, trimmed, including bank/patch number (what we are looking for :) )
