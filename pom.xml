@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.phi</groupId>
 	<artifactId>prophetutilities</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1-RC3</version>
 	<name>Prophet Utils</name>
 	<description>the Prophet's best friend</description>
 	<properties>
