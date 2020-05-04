@@ -15,6 +15,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Philippe Duval
@@ -22,11 +24,13 @@ import org.junit.jupiter.params.provider.CsvSource;
  */
 public class DSISysexLoaderTest {
 
+	private static Logger console = LoggerFactory.getLogger( DSISysexLoaderTest.class );
+
 	// Get file from resources folder
 	private URI getFileURI(String name) throws URISyntaxException {
 		ClassLoader classLoader = this.getClass().getClassLoader();
 		URI uri = classLoader.getResource(name).toURI();
-		System.out.println("Loading file: " + uri);
+		console.debug("Loading file: {}",uri);
 		return uri;
 	}
 
@@ -284,9 +288,7 @@ public class DSISysexLoaderTest {
 		URI uri = getFileURI(file);
 		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
 		List<ByteBuffer> patches = DSISysexLoader.getBankNames(sysex);
-		//WHEN
-		System.out.println("coucou");
-		//THEN
+		//WHEN/THEN
 		assertThat(patches).hasSize(patchNumbers);
 	}
 	

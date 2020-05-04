@@ -1,5 +1,5 @@
 /**
- * FIXME licence and doc
+ * FIXME license and doc
  */
 package com.phi.prophetlibrarian;
 
@@ -16,11 +16,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author Philippe Duval
  *
  */
 public class DSISysexLoader {
+	
+	private static Logger console = LoggerFactory.getLogger( DSISysexLoader.class );
 
 	private static final int CHUNK_SIZE = 8;
 	private static final Map<Integer, String> synthBank;
@@ -31,7 +36,7 @@ public class DSISysexLoader {
 	private static final short PROGRAM_DATA = 0b0010;
 	private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
 	private static final int REV2_SYSEX_SIZE = 2346;
-	private static final int REV2_PROGRAM_SIZE = 1171; // number of bytes used to describe a program in raw sysex file. WARN: this is for a sigle layer !!!
+	private static final int REV2_PROGRAM_SIZE = 1171; // number of bytes used to describe a program in raw sysex file. WARN: this is for a single layer !!!
 	private static final int REV2_DECODED_PROGRAM_SIZE = 1024;
 	private static final int REV2_NAME_SIZE = 20;
 	private static final int REV2_NAME_START = 235;
@@ -85,7 +90,7 @@ public class DSISysexLoader {
 	}
 
 	/**
-	 * returns a litteral representation of the program position
+	 * returns a literal representation of the program position
 	 * 
 	 * @param patch
 	 * @return the bank and patch number in the REV2 fashion, i.e. B55 or C03
@@ -104,7 +109,7 @@ public class DSISysexLoader {
 	}
 
 	// for Prophet '08, the sysex format is different : 184-199 X 32 - 127 Name
-	// charaters 1 – 16, in ASCII format
+	// characters 1 – 16, in ASCII format
 	// programdata is 439 bytes in “packed MS bit” format (see page 54).
 	public static String getP08Name(ByteBuffer patch) {
 		// FIXME using bytebuffers is cumbersome here, translate it to bytearrays
@@ -208,7 +213,7 @@ public class DSISysexLoader {
 	 * F3 F2 F1 F0 6 00 E6 E5 E4 E3 E2 E1 E0 7 G7 G6 G5 G4 G3 G2 G1 G0 7 00 F6 F5 F4
 	 * F3 F2 F1 F0 8 00 G6 G5 G4 G3 G2 G1 G0
 	 * 
-	 * @param buffer the chunk to decode. It should be 8 bytes long, as stated byt
+	 * @param buffer the chunk to decode. It should be 8 bytes long, as stated by the
 	 *               DSI documentation
 	 * @return
 	 */
@@ -260,7 +265,7 @@ public class DSISysexLoader {
 		return pos.concat(" - ").concat(name).trim();
 	}
 	
-	public static List<ByteBuffer> getBankNames(ByteBuffer sysex) throws IOException {
+	public static List<ByteBuffer> getBankNames(ByteBuffer sysex) {
 		// 1. check the synth model
 		String synth = DSISysexLoader.getSynthModel(sysex);
 		int sysexSize = synthsSysexSize.get(synth);
@@ -275,8 +280,10 @@ public class DSISysexLoader {
 		return presets;
 	}
 
+	/**
+	 * @param args the sysex to analyze
+	 */
 	public static void main(String[] args) {
-		// this should take only 1 arg
 		if (args.length != 1) {
 			usage();
 			System.exit(-1);
@@ -284,30 +291,31 @@ public class DSISysexLoader {
 		try {
 			// Under the hood, this is FileSystems.getDefault().getPath()
 			URI file = Paths.get("",args).toAbsolutePath().normalize().toUri();
+			// get the file
 			ByteBuffer sysex = DSISysexLoader.loadSysexFile(file);
+			// If it's a bank, output the list of patches
 			if (Boolean.TRUE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
-				System.out.println("Patch Bank:");
+				console.info("Patch Bank:");
 				List<ByteBuffer> bank = DSISysexLoader.getBankNames(sysex);
-				bank.stream().forEach(p -> System.out.println(DSISysexLoader.getFullName(p)));
+				bank.stream().forEach(p -> console.info(DSISysexLoader.getFullName(p)));
 			} else {
-				System.out.println("Patch name is "+DSISysexLoader.getFullName(sysex));
+			// otherwise, output the patch name
+				console.info("Patch name is {}",DSISysexLoader.getFullName(sysex));
 			}
 		} catch (MalformedURLException e) {
-			System.out.println("Problem locating the indicated file, check your syntax !");
-			e.printStackTrace();
+			console.error("Problem locating the indicated file, check your syntax !",e);
 			System.exit(-1);
 		} catch (IOException e) {
-			System.out.println("Unable to read sysex patch; error is:");
-			e.printStackTrace();
+			console.error("Unable to read sysex patch; error is:",e);
 			System.exit(-1);
 		}
 		System.exit(0);
 	}
 
 	private static void usage() {
-		System.out.println("Prophet name retriever - use it to retrieve the name and position of a patch\n");
-		System.out.println("Usage:\n");
-		System.out.println("	java -jar prophet.jar <sysexfile.syx>");
+		console.info("Prophet name retriever - use it to retrieve the name and position of a patch\n");
+		console.info("Usage:");
+		console.info("	java -jar prophet.jar <sysexfile.syx>");
 	}
 
 }
