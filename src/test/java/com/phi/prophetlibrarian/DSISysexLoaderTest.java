@@ -349,4 +349,37 @@ public class DSISysexLoaderTest {
 		//THEN
 		assertThat(DSISysexLoader.isMultipatchFile(sysex)).isEqualTo(status);
 	}
+	
+	
+	@ParameterizedTest
+	@CsvSource({
+		"B2_P01_Strange_Bass.syx,D128,B4_P128_Strange_Bass.syx",
+		"B2_P01_Strange_Bass.syx,A042,B1_P42_Strange_Bass.syx"
+	})
+	public void should_change_position_on_existing_patch(String file, String newPos, String goldenMaster) throws Exception {
+		//GIVEN
+		URI uri = getFileURI(file);
+		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
+		URI uri2 = getFileURI(goldenMaster);
+		ByteBuffer gold = DSISysexLoader.loadSysexFile(uri2); 
+		//WHEN
+		ByteBuffer newfile = DSISysexLoader.setNewPosition(sysex,newPos);
+		//THEN
+		assertThat(newfile).isEqualByComparingTo(gold);		
+	}
+	
+	//FIXME one test for garbage (newpos being too short, too long, or something similar)
+	@ParameterizedTest
+	@CsvSource({
+		"B2_P01_Strange_Bass.syx,E142",
+		"B2_P01_Strange_Bass.syx,A24"
+	})
+	public void should_throw_exception_on_wrong_newpos(String file, String newPos) throws Exception {
+		//GIVEN
+		URI uri = getFileURI(file);
+		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
+		//WHEN
+		//THEN
+		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.setNewPosition(sysex,newPos)).withMessage("Illegal new position: "+newPos);
+	}
 }

@@ -4,13 +4,16 @@
 package com.phi.prophetlibrarian;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +52,7 @@ public class DSISysexLoader {
 	private static final int MODEL_REV2 = 0x2F;
 	private static final String MODEL_P08_STRING = "Prophet '08";
 	private static final String MODEL_REV2_STRING = "Prophet REV2";
+	private static final List<String> reverseSynthBank = Arrays.asList("A","B","C","D");
 
 	static {
 		Map<Integer, String> aMap = new HashMap<>();
@@ -286,40 +290,99 @@ public class DSISysexLoader {
 		// 4. add everything in a list
 		return presets;
 	}
+	
+	public static ByteBuffer setNewPosition(ByteBuffer sysex, String newPos) {
+		// first first, validate arguments (position should be lower than 128, so no need to bother with the sign of the byte)
+		if (newPos == null || !newPos.matches("[A-D][0-9]{3}") || Integer.valueOf(newPos.substring(1, 4)) > 128) {
+			throw new IllegalArgumentException("Illegal new position: "+newPos);
+		}
+		
+		// first, convert newPos in something usable
+		byte bank = (byte) reverseSynthBank.indexOf(newPos.substring(0, 1));
+		byte patch = (byte) ((Integer.valueOf(newPos.substring(1))-1) & 0xFF); //index begins @ 0, remember
+		
+		// Then modify the bytes associated with the new patch
+		sysex.put(4, bank);
+		sysex.put(5, patch);
+		return sysex;
+	}
 
 	/**
 	 * @param args the sysex to analyze
 	 */
 	public static void main(String[] args) {
-		if (args.length != 1) {
+		if (args.length < 2 || args.length > 4) {
 			usage();
 			System.exit(-1);
 		}
+		String command = args[0];
+		
 		try {
 			// Under the hood, this is FileSystems.getDefault().getPath()
-			URI file = Paths.get("",args).toAbsolutePath().normalize().toUri();
+			URI file = Paths.get("",args[1]).toAbsolutePath().normalize().toUri();
 			// get the file
 			ByteBuffer sysex = DSISysexLoader.loadSysexFile(file);
 			// If it's a bank, output the list of patches
-			if (Boolean.TRUE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
-				console.info("Patch Bank:");
-				List<ByteBuffer> bank = DSISysexLoader.getBankNames(sysex);
-				bank.stream().forEach(p -> console.info(DSISysexLoader.getFullName(p)));
-			} else {
-			// otherwise, output the patch name
-				console.info("Patch name is {}",DSISysexLoader.getFullName(sysex));
+			switch (command) {
+			case "-a":
+			case "--audit":	
+				if (Boolean.TRUE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
+					console.info("Patch Bank:");
+					List<ByteBuffer> bank = DSISysexLoader.getBankNames(sysex);
+					bank.stream().forEach(p -> console.info(DSISysexLoader.getFullName(p)));
+				} else {
+					// otherwise, output the patch name
+					console.info("Patch name is {}",DSISysexLoader.getFullName(sysex));
+				}
+				break;
+			case "-m":
+			case "--move":
+				//0. verify that we have the new position
+				if (args.length <3) {
+					console.error("No new position provided, aborting...");
+					System.exit(-1);
+				} else if (Boolean.FALSE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
+					//1.check that its not multipatch file
+					String newPos=args[2];
+					//2. move
+					ByteBuffer newPatch = DSISysexLoader.setNewPosition(sysex, newPos);
+					//3. get new name
+					String filename = DSISysexLoader.getFullName(newPatch);
+					//4. write new file
+					Path newFile = Paths.get(filename+".syx").toAbsolutePath().normalize();
+					Files.write(newFile, newPatch.array(), StandardOpenOption.CREATE_NEW);
+					console.info("New Patch is {}, created new file {}",filename,newFile);
+				} else {
+					console.error("Cannot change the position in multipatch file !");
+					System.exit(-1);
+				}
+				break;
+			case "-h":
+			case "--help":
+			default:
+				usage();
+				System.exit(0);
+				break;
 			}
 		} catch (Exception e) {
-			console.error("Unable to read sysex patch; error is: {}",e.getMessage(),e);
+			console.error("Unable to process sysex patch; error is: {}",e.getMessage(),e);
 			System.exit(-1);
 		}
 		System.exit(0);
 	}
 
 	private static void usage() {
-		console.info("Prophet name retriever - use it to retrieve the name and position of a patch\n");
-		console.info("Usage:");
-		console.info("	java -jar prophet.jar <sysexfile.syx>");
+		console.info("Prophet name retriever - use it to retrieve the name and position of a patch");
+		console.info("\nUsage:");
+		console.info("	java -jar prophet.jar -[am] <sysexfile.syx> [<newPos>]");
+		console.info("\nCommands:");
+		console.info("	-a,--audit   outputs the formatted position and name of a/several patch(es) in a sysex file");
+		console.info("	-m,--move    creates a new sysex file from a single patch, moving it to the new position in the format [ABCD]001");
+		console.info("	-h,--help    outputs this help");
+		console.info("\nExamples:");
+		console.info("	java -jar prophet.jar -a sysexfile.syx : Outputs the name and position of the patch or the list of patches");
+		console.info("	java -jar prophet.jar -m sysexfile.syx A042 : generates a file with name <newPos - patchname>, having the new position as patch position");
 	}
+
 
 }
