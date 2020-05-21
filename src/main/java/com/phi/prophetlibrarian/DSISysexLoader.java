@@ -1,6 +1,29 @@
 /**
- * FIXME license and doc
- */
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org>
+*/
 package com.phi.prophetlibrarian;
 
 import java.io.IOException;
@@ -8,7 +31,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -27,32 +49,16 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class DSISysexLoader {
-	
-	private static Logger console = LoggerFactory.getLogger( DSISysexLoader.class );
+
+	private static Logger console = LoggerFactory.getLogger(DSISysexLoader.class);
 
 	private static final int CHUNK_SIZE = 8;
 	private static final Map<Integer, String> synthBank;
-	private static final Map<Integer, String> synthsModels;
-	private static final Map<String, Integer> synthsSysexSize;
 	private static final short SYSTEM_EXCLUSIVE = 0xF0;
 	private static final short EOX = 0xF7;
 	private static final short PROGRAM_DATA = 0b0010;
 	private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
-	private static final int REV2_SYSEX_SIZE = 2346;
-	private static final int REV2_PROGRAM_SIZE = 1171; // number of bytes used to describe a program in raw sysex file. WARN: this is for a single layer !!!
-	private static final int REV2_DECODED_PROGRAM_SIZE = 1024;
-	private static final int REV2_NAME_SIZE = 20;
-	private static final int REV2_NAME_START = 235;
-	private static final int P08_SYSEX_SIZE = 446;
-	private static final int P08_PROGRAM_SIZE = 439;
-	private static final int P08_DECODED_PROGRAM_SIZE = 384;
-	private static final int P08_NAME_SIZE = 16;
-	private static final int P08_NAME_START = 184;
-	private static final int MODEL_P08 = 35;
-	private static final int MODEL_REV2 = 0x2F;
-	private static final String MODEL_P08_STRING = "Prophet '08";
-	private static final String MODEL_REV2_STRING = "Prophet REV2";
-	private static final List<String> reverseSynthBank = Arrays.asList("A","B","C","D");
+	private static final List<String> reverseSynthBank = Arrays.asList("A", "B", "C", "D");
 
 	static {
 		Map<Integer, String> aMap = new HashMap<>();
@@ -61,18 +67,18 @@ public class DSISysexLoader {
 		aMap.put(2, "C");
 		aMap.put(3, "D");
 		synthBank = Collections.unmodifiableMap(aMap);
-
-		Map<Integer, String> anotherMap = new HashMap<>();
-		anotherMap.put(MODEL_P08, MODEL_P08_STRING);
-		anotherMap.put(MODEL_REV2, MODEL_REV2_STRING);
-		synthsModels = Collections.unmodifiableMap(anotherMap);
-		
-		Map<String, Integer> yetAnotherMap = new HashMap<>();
-		yetAnotherMap.put(MODEL_P08_STRING, P08_SYSEX_SIZE);
-		yetAnotherMap.put(MODEL_REV2_STRING, REV2_SYSEX_SIZE);
-		synthsSysexSize = Collections.unmodifiableMap(yetAnotherMap);
 	}
 
+	/**
+	 * simple utility method to load a sysex file. The method checks if the file is
+	 * a valid sysex.
+	 * 
+	 * @param uri the location of the file
+	 * @return the file wrapped in a ByteBuffer
+	 * @throws IOException              if something goes wrong at the filesystem
+	 *                                  level
+	 * @throws IllegalArgumentException if the file is not a sysex file
+	 */
 	public static ByteBuffer loadSysexFile(URI uri) throws IOException {
 		// Load entire file
 		ByteBuffer sysex = ByteBuffer.wrap(Files.readAllBytes(Paths.get(uri)));
@@ -83,10 +89,16 @@ public class DSISysexLoader {
 		}
 	}
 
-	public static String toHex(ByteBuffer sysex) {
-		char[] hexChars = new char[sysex.limit() * 2];
-		for (int j = 0; j < sysex.limit(); j++) {
-			int v = sysex.get(j) & 0xFF; // from signed to unsigned
+	/**
+	 * simple converter method that converts a byte buffer to its hex representation
+	 * 
+	 * @param buffer the bytes to convert
+	 * @return a string representing the hex values of the byte buffer
+	 */
+	public static String toHex(ByteBuffer buffer) {
+		char[] hexChars = new char[buffer.limit() * 2];
+		for (int j = 0; j < buffer.limit(); j++) {
+			int v = buffer.get(j) & 0xFF; // from signed to unsigned
 			hexChars[j * 2] = hexArray[v >>> 4];
 			hexChars[j * 2 + 1] = hexArray[v & 0x0F];
 		}
@@ -108,29 +120,26 @@ public class DSISysexLoader {
 		return banklitteral + String.format("%03d", patchnumber + 1);// don't forget that index begins at 1 in the synth
 	}
 
+	// TODO
 	public static String formatSysex(String sysex) {
 		return sysex.replaceAll("(.{2})", "$1 ");
 	}
 
-	// for Prophet '08, the sysex format is different : 184-199 X 32 - 127 Name
-	// characters 1 – 16, in ASCII format
-	// programdata is 439 bytes in “packed MS bit” format (see page 54).
-	public static String getP08Name(ByteBuffer patch) {
+	// TODO
+	public static String getPatchName(ByteBuffer patch) {
 		// FIXME using bytebuffers is cumbersome here, translate it to bytearrays
 		if (!DSISysexLoader.isPatchData(patch)) {
 			throw new IllegalArgumentException("sysex is not a program data");
 		}
-		if (!MODEL_P08_STRING.equals(DSISysexLoader.getSynthModel(patch))) {
-			throw new IllegalArgumentException("wrong synth model !!!");
-		}
+		final ProphetSynth synth = DSISysexLoader.getSynthModel(patch);
 		// 1. isolate the program data (index 6 in the sysex payload)
-		byte[] programData = new byte[P08_PROGRAM_SIZE];
+		byte[] programData = new byte[synth.PROGRAM_SIZE];
 		patch.rewind();
 		patch.position(6);
-		patch.get(programData, 0, P08_PROGRAM_SIZE);
+		patch.get(programData, 0, synth.PROGRAM_SIZE);
 		ByteBuffer encodedLayer = ByteBuffer.wrap(programData);
 		// 2. decode it chunk by chunk
-		byte[] decodedProgramData = new byte[P08_DECODED_PROGRAM_SIZE];
+		byte[] decodedProgramData = new byte[synth.DECODED_PROGRAM_SIZE];
 		ByteBuffer decodedLayer = ByteBuffer.wrap(decodedProgramData);
 		byte[] chunk = new byte[CHUNK_SIZE];
 		for (int i = 0; i < programData.length - CHUNK_SIZE; i += CHUNK_SIZE) {
@@ -144,72 +153,57 @@ public class DSISysexLoader {
 		// the last chunk should be decoded by hand,
 
 		// 3. isolate the part that we need to get the name(s) (indexes 184-199)
-		byte[] layerName = new byte[P08_NAME_SIZE];
+		byte[] layerName = new byte[synth.PATCH_NAME_SIZE];
 		decodedLayer.rewind();
-		decodedLayer.position(P08_NAME_START);
-		decodedLayer.get(layerName, 0, P08_NAME_SIZE);
+		decodedLayer.position(synth.PATCH_NAME_START);
+		decodedLayer.get(layerName, 0, synth.PATCH_NAME_SIZE);
 
 		// 4. translate the bytes in string
 		return new String(layerName, StandardCharsets.US_ASCII);
 	}
 
-	public static String getREV2Name(ByteBuffer patch) {
-		if (!DSISysexLoader.isPatchData(patch)) {
-			throw new IllegalArgumentException("sysex is not a program data");
-		}
-		if (!MODEL_REV2_STRING.equals(DSISysexLoader.getSynthModel(patch))) {
-			throw new IllegalArgumentException("wrong synth model !!!");
-		}
-
-		// 1. isolate the program data (index 6 in the sysex payload)
-		byte[] programData = new byte[REV2_PROGRAM_SIZE];
-		patch.rewind();
-		patch.position(6);
-		patch.get(programData, 0, REV2_PROGRAM_SIZE);
-		ByteBuffer encodedLayer = ByteBuffer.wrap(programData);
-		// 2. decode it chunk by chunk
-		// FIXME the last chunk is incomplete, adapt the decode method to deal with it !
-		byte[] decodedProgramData = new byte[REV2_DECODED_PROGRAM_SIZE];
-		ByteBuffer decodedLayer = ByteBuffer.wrap(decodedProgramData);
-		byte[] chunk = new byte[CHUNK_SIZE];
-		for (int i = 0; i < programData.length - CHUNK_SIZE; i += CHUNK_SIZE) {
-			encodedLayer.get(chunk, 0, CHUNK_SIZE); // consume 8 bytes in the buffer --> chunk
-			decodedLayer.put(DSISysexLoader.unpackData(ByteBuffer.wrap(chunk)));// pass the chunk as a new Bytebuffer,
-																				// decode it, and append it to the
-																				// decodedlayer
-		}
-
-		// 3. isolate the part that we need to get the name(s) (indexes 235-->254)
-		byte[] layerName = new byte[REV2_NAME_SIZE];
-		decodedLayer.rewind();
-		decodedLayer.position(REV2_NAME_START);
-		decodedLayer.get(layerName, 0, REV2_NAME_SIZE);
-
-		// 4. translate the bytes in string
-		return new String(layerName, StandardCharsets.US_ASCII);
-	}
-
+	/**
+	 * test if a ByteBuffer is a well-formatted sysex (beginning by F0, ending by
+	 * F7)
+	 * 
+	 * @param sysex a ByteBuffer representing the sysex file to inspect
+	 * @return true if the file is well formatted, false otherwise
+	 */
 	public static boolean isSysexFile(ByteBuffer sysex) {
 		return SYSTEM_EXCLUSIVE == (sysex.get(0) & 0xFF) && EOX == (sysex.get(sysex.limit() - 1) & 0xFF);
 	}
 
-	public static String getSynthModel(ByteBuffer sysex) {
-		switch (sysex.get(2) & 0xFF) {
-		case MODEL_P08:
-			return MODEL_P08_STRING;
-		case MODEL_REV2:
-			return MODEL_REV2_STRING;
-		default:
-			throw new IllegalArgumentException("Synth Model Not Supported !");
-		}
+	/**
+	 * returns the synth model concerned by a given sysex file
+	 * 
+	 * @param sysex a ByteBuffer representing the sysex file to inspect
+	 * @return @ProphetSynth object representing the synth for which the sysex is
+	 */
+	public static ProphetSynth getSynthModel(ByteBuffer sysex) {
+		return ProphetSynth.fromSysexNumber(sysex.get(2) & 0xFF);
 	}
 
+	/**
+	 * test if a ByteBuffer is a sysex patch data. I t first validates that it is a
+	 * sysex file, then that it is a valid patch data, as specified in the official
+	 * Prophet documentation. Especially, this will return false if the buffer
+	 * contains an edit buffer payload
+	 * 
+	 * @param sysex a ByteBuffer representing the sysex file to inspect
+	 * @return true if the buffer contains a patch data, false otherwise
+	 */
 	public static boolean isPatchData(ByteBuffer sysex) {
 		return isSysexFile(sysex) && (PROGRAM_DATA == (sysex.get(3) & 0xFF));
 	}
 
+	/**
+	 * test if a ByteBuffer contains several patches
+	 * 
+	 * @param file a ByteBuffer representing the sysex file to inspect
+	 * @return true if the buffer contains several patches, false otherwise
+	 */
 	public static Boolean isMultipatchFile(ByteBuffer file) {
-		Boolean hasMultiplePatches = file.limit() > synthsSysexSize.get(DSISysexLoader.getSynthModel(file));
+		Boolean hasMultiplePatches = file.limit() > DSISysexLoader.getSynthModel(file).SYSEX_SIZE;
 		return DSISysexLoader.isPatchData(file) && hasMultiplePatches;
 	}
 
@@ -224,9 +218,9 @@ public class DSISysexLoader {
 	 * F3 F2 F1 F0 6 00 E6 E5 E4 E3 E2 E1 E0 7 G7 G6 G5 G4 G3 G2 G1 G0 7 00 F6 F5 F4
 	 * F3 F2 F1 F0 8 00 G6 G5 G4 G3 G2 G1 G0
 	 * 
-	 * @param buffer the chunk to decode. It should be 8 bytes long, as stated by the
-	 *               DSI documentation
-	 * @return
+	 * @param buffer the chunk to decode. It should be 8 bytes long, as stated by
+	 *               the DSI documentation
+	 * @return a ByteBuffer containing the decoded chunk
 	 */
 	public static ByteBuffer unpackData(ByteBuffer buffer) {
 		// first first, verify that we have 8 bytes, and that each byte begins with 0 as
@@ -256,30 +250,32 @@ public class DSISysexLoader {
 		return unpackedBuffer;
 	}
 
+	/**
+	 * retrieves the name of a patch
+	 * 
+	 * @param patch a ByteBuffer representing the sysex file to inspect
+	 * @return the name of the patch, stripped down from the leading and trailing
+	 *         whitespaces
+	 */
 	public static String getFullName(ByteBuffer patch) {
 		// get position
 		String pos = DSISysexLoader.getPosition(patch);
 		// get name
 		String name = "";
-		switch (DSISysexLoader.getSynthModel(patch)) {
-			case MODEL_P08_STRING:
-				name = DSISysexLoader.getP08Name(patch);
-				break;
-			case MODEL_REV2_STRING:
-				name = DSISysexLoader.getREV2Name(patch);
-				break;
-			default:
-				throw new IllegalArgumentException("Wrong Synth Model");
-		}
-
+		name = DSISysexLoader.getPatchName(patch);
 		// concat, trim, return
-		return pos.concat(" - ").concat(name).trim();
+		return pos.concat(" - ").concat(name).strip();
 	}
-	
-	public static List<ByteBuffer> getBankNames(ByteBuffer sysex) {
+
+	/**
+	 * splits a multipatch sysex into a list of single patches
+	 * 
+	 * @param sysex the multipatch sysex to split
+	 * @return a list of single patch sysexes
+	 */
+	public static List<ByteBuffer> splitBankSysex(ByteBuffer sysex) {
 		// 1. check the synth model
-		String synth = DSISysexLoader.getSynthModel(sysex);
-		int sysexSize = synthsSysexSize.get(synth);
+		int sysexSize = DSISysexLoader.getSynthModel(sysex).SYSEX_SIZE;
 		// 2. cut it every x depending on the synth model
 		List<ByteBuffer> presets = new ArrayList<>();
 		while (sysex.hasRemaining()) {
@@ -290,17 +286,26 @@ public class DSISysexLoader {
 		// 4. add everything in a list
 		return presets;
 	}
-	
+
+	/**
+	 * sets a new position (e.g. B042) for an existing patch
+	 * 
+	 * @param sysex  a ByteBuffer representing the patch to modify
+	 * @param newPos the new position, in literal format, e.g B042 (mind the first
+	 *               0). The format should match [A-D][0-9]{3}
+	 * @return the patch at the new position
+	 */
 	public static ByteBuffer setNewPosition(ByteBuffer sysex, String newPos) {
-		// first first, validate arguments (position should be lower than 128, so no need to bother with the sign of the byte)
+		// first first, validate arguments (position should be lower than 128, so no
+		// need to bother with the sign of the byte)
 		if (newPos == null || !newPos.matches("[A-D][0-9]{3}") || Integer.valueOf(newPos.substring(1, 4)) > 128) {
-			throw new IllegalArgumentException("Illegal new position: "+newPos);
+			throw new IllegalArgumentException("Illegal new position: " + newPos);
 		}
-		
+
 		// first, convert newPos in something usable
 		byte bank = (byte) reverseSynthBank.indexOf(newPos.substring(0, 1));
-		byte patch = (byte) ((Integer.valueOf(newPos.substring(1))-1) & 0xFF); //index begins @ 0, remember
-		
+		byte patch = (byte) ((Integer.valueOf(newPos.substring(1)) - 1) & 0xFF); // index begins @ 0, remember
+
 		// Then modify the bytes associated with the new patch
 		sysex.put(4, bank);
 		sysex.put(5, patch);
@@ -308,6 +313,9 @@ public class DSISysexLoader {
 	}
 
 	/**
+	 * ProphetUtilities, allows to retrieve the position and name of a patch or a
+	 * list of patches, and change the position of an existing patch
+	 * 
 	 * @param args the sysex to analyze
 	 */
 	public static void main(String[] args) {
@@ -316,73 +324,78 @@ public class DSISysexLoader {
 			System.exit(-1);
 		}
 		String command = args[0];
-		
+
 		try {
 			// Under the hood, this is FileSystems.getDefault().getPath()
-			URI file = Paths.get("",args[1]).toAbsolutePath().normalize().toUri();
+			URI file = Paths.get("", args[1]).toAbsolutePath().normalize().toUri();
 			// get the file
 			ByteBuffer sysex = DSISysexLoader.loadSysexFile(file);
 			// If it's a bank, output the list of patches
 			switch (command) {
-			case "-a":
-			case "--audit":	
-				if (Boolean.TRUE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
-					console.info("Patch Bank:");
-					List<ByteBuffer> bank = DSISysexLoader.getBankNames(sysex);
-					bank.stream().forEach(p -> console.info(DSISysexLoader.getFullName(p)));
-				} else {
-					// otherwise, output the patch name
-					console.info("Patch name is {}",DSISysexLoader.getFullName(sysex));
-				}
-				break;
-			case "-m":
-			case "--move":
-				//0. verify that we have the new position
-				if (args.length <3) {
-					console.error("No new position provided, aborting...");
-					System.exit(-1);
-				} else if (Boolean.FALSE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
-					//1.check that its not multipatch file
-					String newPos=args[2];
-					//2. move
-					ByteBuffer newPatch = DSISysexLoader.setNewPosition(sysex, newPos);
-					//3. get new name
-					String filename = DSISysexLoader.getFullName(newPatch);
-					//4. write new file
-					Path newFile = Paths.get(filename+".syx").toAbsolutePath().normalize();
-					Files.write(newFile, newPatch.array(), StandardOpenOption.CREATE_NEW);
-					console.info("New Patch is {}, created new file {}",filename,newFile);
-				} else {
-					console.error("Cannot change the position in multipatch file !");
-					System.exit(-1);
-				}
-				break;
-			case "-h":
-			case "--help":
-			default:
-				usage();
-				System.exit(0);
-				break;
+				case "-a":
+				case "--audit":
+					if (Boolean.TRUE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
+						console.info("Patch Bank:");
+						List<ByteBuffer> bank = DSISysexLoader.splitBankSysex(sysex);
+						bank.stream().forEach(p -> console.info(DSISysexLoader.getFullName(p)));
+					} else {
+						// otherwise, output the patch name
+						console.info("Patch name is {}", DSISysexLoader.getFullName(sysex));
+					}
+					break;
+				case "-m":
+				case "--move":
+					// 0. verify that we have the new position
+					if (args.length < 3) {
+						console.error("No new position provided, aborting...");
+						System.exit(-1);
+					} else if (Boolean.FALSE.equals(DSISysexLoader.isMultipatchFile(sysex))) {
+						// 1.check that its not multipatch file
+						String newPos = args[2];
+						// 2. move
+						ByteBuffer newPatch = DSISysexLoader.setNewPosition(sysex, newPos);
+						// 3. get new name
+						String filename = DSISysexLoader.getFullName(newPatch);
+						// 4. write new file
+						Path newFile = Paths.get(filename + ".syx").toAbsolutePath().normalize();
+						Files.write(newFile, newPatch.array(), StandardOpenOption.CREATE_NEW);
+						console.info("New Patch is {}, created new file {}", filename, newFile);
+					} else {
+						console.error("Cannot change the position in multipatch file !");
+						System.exit(-1);
+					}
+					break;
+				case "-h":
+				case "--help":
+				default:
+					usage();
+					System.exit(0);
+					break;
 			}
 		} catch (Exception e) {
-			console.error("Unable to process sysex patch; error is: {}",e.getMessage(),e);
+			console.error("Unable to process sysex patch; error is: {}", e.getMessage(), e);
 			System.exit(-1);
 		}
 		System.exit(0);
 	}
 
+	/**
+	 * Outputs the documentation to the console
+	 */
 	private static void usage() {
 		console.info("Prophet name retriever - use it to retrieve the name and position of a patch");
 		console.info("\nUsage:");
 		console.info("	java -jar prophet.jar -[am] <sysexfile.syx> [<newPos>]");
 		console.info("\nCommands:");
 		console.info("	-a,--audit   outputs the formatted position and name of a/several patch(es) in a sysex file");
-		console.info("	-m,--move    creates a new sysex file from a single patch, moving it to the new position in the format [ABCD]001");
+		console.info(
+				"	-m,--move    creates a new sysex file from a single patch, moving it to the new position in the format [ABCD]001");
 		console.info("	-h,--help    outputs this help");
 		console.info("\nExamples:");
-		console.info("	java -jar prophet.jar -a sysexfile.syx : Outputs the name and position of the patch or the list of patches");
-		console.info("	java -jar prophet.jar -m sysexfile.syx A042 : generates a file with name <newPos - patchname>, having the new position as patch position");
+		console.info(
+				"	java -jar prophet.jar -a sysexfile.syx : Outputs the name and position of the patch or the list of patches");
+		console.info(
+				"	java -jar prophet.jar -m sysexfile.syx A042 : generates a file with name <newPos - patchname>, having the new position as patch position");
 	}
-
 
 }
