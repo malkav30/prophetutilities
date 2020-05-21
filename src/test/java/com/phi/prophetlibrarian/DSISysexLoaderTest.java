@@ -1,5 +1,28 @@
 /**
- * 
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org>
  */
 package com.phi.prophetlibrarian;
 
@@ -24,13 +47,13 @@ import org.slf4j.LoggerFactory;
  */
 public class DSISysexLoaderTest {
 
-	private static Logger console = LoggerFactory.getLogger( DSISysexLoaderTest.class );
+	private static Logger console = LoggerFactory.getLogger(DSISysexLoaderTest.class);
 
 	// Get file from resources folder
 	private URI getFileURI(String name) throws URISyntaxException {
 		ClassLoader classLoader = this.getClass().getClassLoader();
 		URI uri = classLoader.getResource(name).toURI();
-		console.debug("Loading file: {}",uri);
+		console.debug("Loading file: {}", uri);
 		return uri;
 	}
 
@@ -49,11 +72,7 @@ public class DSISysexLoaderTest {
 
 	// output the patch number in literal form
 	@ParameterizedTest
-	@CsvSource({
-		"B2_P01_Strange_Bass.syx,B001",
-		"B2 P55 Alpha Lead.syx,B055",
-		"Stranger_Things.syx,B108"
-	})
+	@CsvSource({ "B2_P01_Strange_Bass.syx,B001", "B2 P55 Alpha Lead.syx,B055", "Stranger_Things.syx,B108" })
 	public void should_return_position(String file, String position) throws Exception {
 		// GIVEN a loader, and some variables
 		URI uri = getFileURI(file);
@@ -62,7 +81,7 @@ public class DSISysexLoaderTest {
 		// WHEN we try to get the position of a sysex file
 		String result = DSISysexLoader.getPosition(patch);
 		// THEN we should print the position of the patch
-		//Assertions.assertEquals(result, position);
+		// Assertions.assertEquals(result, position);
 		assertThat(result).isEqualTo(position);
 	}
 
@@ -92,32 +111,27 @@ public class DSISysexLoaderTest {
 
 	// get the patch name (not trimmed)
 	@ParameterizedTest
-	@CsvSource({
-		"B2_P01_Strange_Bass.syx,'Strange Bass JR '",
-		"B2 P55 Alpha Lead.syx,'Alpha Lead JR   '"
-	})
+	@CsvSource({ "B2_P01_Strange_Bass.syx,'Strange Bass JR '", "B2 P55 Alpha Lead.syx,'Alpha Lead JR   '" })
 	public void should_return_patch_name_p08(String file, String name) throws Exception {
 		// GIVEN
 		URI uri = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
 		// WHEN
-		String result = DSISysexLoader.getP08Name(patch);
+		String result = DSISysexLoader.getPatchName(patch);
 		// THEN
 		assertThat(result).isEqualTo(name);
 	}
 
 	// get the patch name (not trimmed) for a rev2 patch
 	@ParameterizedTest
-	@CsvSource({
-		"Stranger_Things.syx,'StrangerThings      '"
-	})
+	@CsvSource({ "Stranger_Things.syx,'StrangerThings      '" })
 	public void should_return_patch_name_rev2(String file, String name) throws Exception {
-		// GIVEN 
+		// GIVEN
 		URI uri = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
 
 		// WHEN
-		String result = DSISysexLoader.getREV2Name(patch);
+		String result = DSISysexLoader.getPatchName(patch);
 		// System.out.println(result);
 		// THEN
 		assertThat(result).isEqualTo(name);
@@ -147,23 +161,18 @@ public class DSISysexLoaderTest {
 
 	// get the prophet revision
 	@ParameterizedTest
-	@CsvSource({
-		"B2_P01_Strange_Bass.syx,Prophet '08",
-		"B2 P55 Alpha Lead.syx,Prophet '08",
-		"Stranger_Things.syx,Prophet REV2"
-	})
+	@CsvSource({ "B2_P01_Strange_Bass.syx,Prophet '08", "B2 P55 Alpha Lead.syx,Prophet '08",
+			"Stranger_Things.syx,Prophet REV2" })
 	public void should_identify_synth(String file, String synth) throws Exception {
 		// GIVEN
 		URI url = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(url);
 		// WHEN/THEN
-		assertThat(synth).isEqualTo(DSISysexLoader.getSynthModel(patch).model_literal);
+		assertThat(synth).isEqualTo(DSISysexLoader.getSynthModel(patch).MODEL_LITERAL);
 	}
-	
+
 	@ParameterizedTest
-	@CsvSource({
-	 	"wrongbank.syx"
-	})
+	@CsvSource({ "wrongbank.syx" })
 	public void should_throw_exception_when_wrong_synth(String file) throws Exception {
 		// GIVEN
 		URI url = getFileURI(file);
@@ -188,9 +197,8 @@ public class DSISysexLoaderTest {
 		// GIVEN
 		URI uri = getFileURI("foo.syx");
 		// WHEN
-		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-											DSISysexLoader.loadSysexFile(uri));
-		
+		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.loadSysexFile(uri));
+
 	}
 
 	// ability to decode MSB encoded binary data
@@ -285,101 +293,87 @@ public class DSISysexLoaderTest {
 		ByteBuffer illegalChunk = ByteBuffer.wrap(bytes);
 		// WHEN
 		// THEN AssertJ Style
-		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.unpackData(illegalChunk));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> DSISysexLoader.unpackData(illegalChunk));
 	}
 
-
 	@ParameterizedTest
-	@CsvSource({
-	 	"B2_P01_Strange_Bass.syx,1",
-	 	"Prophet_08_Programs_v1.0.syx,256",
-	 	"Rev2_Programs_v1.0.syx,512"
-	})
+	@CsvSource({ "B2_P01_Strange_Bass.syx,1", "Prophet_08_Programs_v1.0.syx,256", "Rev2_Programs_v1.0.syx,512" })
 	public void should_return_patch_list(String file, int patchNumbers) throws Exception {
-		//GIVEN
+		// GIVEN
 		URI uri = getFileURI(file);
 		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
-		List<ByteBuffer> patches = DSISysexLoader.getBankNames(sysex);
-		//WHEN/THEN
+		List<ByteBuffer> patches = DSISysexLoader.splitBankSysex(sysex);
+		// WHEN/THEN
 		assertThat(patches).hasSize(patchNumbers);
 	}
-	
+
 	@ParameterizedTest
-	@CsvSource({
-	 	"wrongbank.syx"
-	})
+	@CsvSource({ "wrongbank.syx" })
 	public void should_not_return_patch_list_unsupported_synth(String file) throws Exception {
-		//GIVEN
+		// GIVEN
 		URI uri = getFileURI(file);
 		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
-		//WHEN/THEN
-		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.getBankNames(sysex));
+		// WHEN/THEN
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> DSISysexLoader.splitBankSysex(sysex));
 	}
-	
-	// finally, validate that we can have the full name, trimmed, including bank/patch number (what we are looking for :) )
+
+	// finally, validate that we can have the full name, trimmed, including
+	// bank/patch number (what we are looking for :) )
 	@ParameterizedTest
-	@CsvSource({
-		"B2_P01_Strange_Bass.syx,B001 - Strange Bass JR",
-		"B2 P55 Alpha Lead.syx,B055 - Alpha Lead JR",
-		"Stranger_Things.syx,B108 - StrangerThings"
-	})
+	@CsvSource({ "B2_P01_Strange_Bass.syx,B001 - Strange Bass JR", "B2 P55 Alpha Lead.syx,B055 - Alpha Lead JR",
+			"Stranger_Things.syx,B108 - StrangerThings" })
 	public void should_return_full_patch_name(String file, String name) throws Exception {
-		//GIVEN a P'08 file
+		// GIVEN a P'08 file
 		URI uri = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(uri);
-		//WHEN we call the method
+		// WHEN we call the method
 		String fullName = DSISysexLoader.getFullName(patch);
-		//THEN it should return the full patch name and position
+		// THEN it should return the full patch name and position
 		assertThat(name.equals(fullName)).isTrue();
 	}
 
-
 	@ParameterizedTest
-	@CsvSource({
-		"Stranger_Things.syx,false",
-		"B2_P01_Strange_Bass.syx,false",
-		"Prophet_08_Programs_v1.0.syx,true",
-		"Rev2_Programs_v1.0.syx,true"
-	})
+	@CsvSource({ "Stranger_Things.syx,false", "B2_P01_Strange_Bass.syx,false", "Prophet_08_Programs_v1.0.syx,true",
+			"Rev2_Programs_v1.0.syx,true" })
 	public void should_identify_multipatch_sysex_file(String file, Boolean status) throws Exception {
-		//GIVEN
+		// GIVEN
 		URI uri = getFileURI(file);
 		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
-		//WHEN
-		//THEN
+		// WHEN
+		// THEN
 		assertThat(DSISysexLoader.isMultipatchFile(sysex)).isEqualTo(status);
 	}
-	
-	
+
 	@ParameterizedTest
-	@CsvSource({
-		"B2_P01_Strange_Bass.syx,D128,B4_P128_Strange_Bass.syx",
-		"B2_P01_Strange_Bass.syx,A042,B1_P42_Strange_Bass.syx"
-	})
-	public void should_change_position_on_existing_patch(String file, String newPos, String goldenMaster) throws Exception {
-		//GIVEN
+	@CsvSource({ "B2_P01_Strange_Bass.syx,D128,B4_P128_Strange_Bass.syx",
+			"B2_P01_Strange_Bass.syx,A042,B1_P42_Strange_Bass.syx" })
+	public void should_change_position_on_existing_patch(String file, String newPos, String goldenMaster)
+			throws Exception {
+		// GIVEN
 		URI uri = getFileURI(file);
 		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
 		URI uri2 = getFileURI(goldenMaster);
-		ByteBuffer gold = DSISysexLoader.loadSysexFile(uri2); 
-		//WHEN
-		ByteBuffer newfile = DSISysexLoader.setNewPosition(sysex,newPos);
-		//THEN
-		assertThat(newfile).isEqualByComparingTo(gold);		
+		ByteBuffer gold = DSISysexLoader.loadSysexFile(uri2);
+		// WHEN
+		ByteBuffer newfile = DSISysexLoader.setNewPosition(sysex, newPos);
+		// THEN
+		assertThat(newfile).isEqualByComparingTo(gold);
 	}
-	
-	//FIXME one test for garbage (newpos being too short, too long, or something similar)
+
+	// FIXME one test for garbage (newpos being too short, too long, or something
+	// similar)
 	@ParameterizedTest
-	@CsvSource({
-		"B2_P01_Strange_Bass.syx,E142",
-		"B2_P01_Strange_Bass.syx,A24"
-	})
+	@CsvSource({ "B2_P01_Strange_Bass.syx,E142", "B2_P01_Strange_Bass.syx,A24" })
 	public void should_throw_exception_on_wrong_newpos(String file, String newPos) throws Exception {
-		//GIVEN
+		// GIVEN
 		URI uri = getFileURI(file);
 		ByteBuffer sysex = DSISysexLoader.loadSysexFile(uri);
-		//WHEN
-		//THEN
-		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> DSISysexLoader.setNewPosition(sysex,newPos)).withMessage("Illegal new position: "+newPos);
+		// WHEN
+		// THEN
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> DSISysexLoader.setNewPosition(sysex, newPos))
+				.withMessage("Illegal new position: " + newPos);
 	}
 }
