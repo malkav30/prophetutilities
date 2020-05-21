@@ -157,7 +157,7 @@ public class DSISysexLoaderTest {
 		URI url = getFileURI(file);
 		ByteBuffer patch = DSISysexLoader.loadSysexFile(url);
 		// WHEN/THEN
-		assertThat(synth.equals(DSISysexLoader.getSynthModel(patch))).isTrue();
+		assertThat(synth).isEqualTo(DSISysexLoader.getSynthModel(patch).model_literal);
 	}
 	
 	@ParameterizedTest

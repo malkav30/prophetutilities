@@ -8,7 +8,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -32,18 +31,18 @@ public class DSISysexLoader {
 
 	private static final int CHUNK_SIZE = 8;
 	private static final Map<Integer, String> synthBank;
-	private static final Map<Integer, String> synthsModels;
-	private static final Map<String, Integer> synthsSysexSize;
+	// private static final Map<Integer, String> synthsModels;
+	// private static final Map<String, Integer> synthsSysexSize;
 	private static final short SYSTEM_EXCLUSIVE = 0xF0;
 	private static final short EOX = 0xF7;
 	private static final short PROGRAM_DATA = 0b0010;
 	private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
-	private static final int REV2_SYSEX_SIZE = 2346;
+	// private static final int REV2_SYSEX_SIZE = 2346;
 	private static final int REV2_PROGRAM_SIZE = 1171; // number of bytes used to describe a program in raw sysex file. WARN: this is for a single layer !!!
 	private static final int REV2_DECODED_PROGRAM_SIZE = 1024;
 	private static final int REV2_NAME_SIZE = 20;
 	private static final int REV2_NAME_START = 235;
-	private static final int P08_SYSEX_SIZE = 446;
+	// private static final int P08_SYSEX_SIZE = 446;
 	private static final int P08_PROGRAM_SIZE = 439;
 	private static final int P08_DECODED_PROGRAM_SIZE = 384;
 	private static final int P08_NAME_SIZE = 16;
@@ -62,15 +61,6 @@ public class DSISysexLoader {
 		aMap.put(3, "D");
 		synthBank = Collections.unmodifiableMap(aMap);
 
-		Map<Integer, String> anotherMap = new HashMap<>();
-		anotherMap.put(MODEL_P08, MODEL_P08_STRING);
-		anotherMap.put(MODEL_REV2, MODEL_REV2_STRING);
-		synthsModels = Collections.unmodifiableMap(anotherMap);
-		
-		Map<String, Integer> yetAnotherMap = new HashMap<>();
-		yetAnotherMap.put(MODEL_P08_STRING, P08_SYSEX_SIZE);
-		yetAnotherMap.put(MODEL_REV2_STRING, REV2_SYSEX_SIZE);
-		synthsSysexSize = Collections.unmodifiableMap(yetAnotherMap);
 	}
 
 	public static ByteBuffer loadSysexFile(URI uri) throws IOException {
@@ -120,7 +110,7 @@ public class DSISysexLoader {
 		if (!DSISysexLoader.isPatchData(patch)) {
 			throw new IllegalArgumentException("sysex is not a program data");
 		}
-		if (!MODEL_P08_STRING.equals(DSISysexLoader.getSynthModel(patch))) {
+		if (DSISysexLoader.getSynthModel(patch) != ProphetSynth.MODEL_P08) {
 			throw new IllegalArgumentException("wrong synth model !!!");
 		}
 		// 1. isolate the program data (index 6 in the sysex payload)
@@ -157,7 +147,7 @@ public class DSISysexLoader {
 		if (!DSISysexLoader.isPatchData(patch)) {
 			throw new IllegalArgumentException("sysex is not a program data");
 		}
-		if (!MODEL_REV2_STRING.equals(DSISysexLoader.getSynthModel(patch))) {
+		if (DSISysexLoader.getSynthModel(patch) != ProphetSynth.MODEL_REV2) {
 			throw new IllegalArgumentException("wrong synth model !!!");
 		}
 
@@ -193,15 +183,16 @@ public class DSISysexLoader {
 		return SYSTEM_EXCLUSIVE == (sysex.get(0) & 0xFF) && EOX == (sysex.get(sysex.limit() - 1) & 0xFF);
 	}
 
-	public static String getSynthModel(ByteBuffer sysex) {
-		switch (sysex.get(2) & 0xFF) {
-		case MODEL_P08:
-			return MODEL_P08_STRING;
-		case MODEL_REV2:
-			return MODEL_REV2_STRING;
-		default:
+	public static ProphetSynth getSynthModel(ByteBuffer sysex) {
+		//FIXME put the logic in the enum !
+		ProphetSynth synth = ProphetSynth.valueOfSysexNumber(sysex.get(2) & 0xFF);
+		if (synth == null) {
 			throw new IllegalArgumentException("Synth Model Not Supported !");
+		} else {
+			return synth;
 		}
+
+
 	}
 
 	public static boolean isPatchData(ByteBuffer sysex) {
@@ -209,7 +200,7 @@ public class DSISysexLoader {
 	}
 
 	public static Boolean isMultipatchFile(ByteBuffer file) {
-		Boolean hasMultiplePatches = file.limit() > synthsSysexSize.get(DSISysexLoader.getSynthModel(file));
+		Boolean hasMultiplePatches = file.limit() > DSISysexLoader.getSynthModel(file).model_sysex_size;
 		return DSISysexLoader.isPatchData(file) && hasMultiplePatches;
 	}
 
@@ -256,16 +247,17 @@ public class DSISysexLoader {
 		return unpackedBuffer;
 	}
 
+	//FIXME refactor to get rid of the switch by polymorphism on the enum
 	public static String getFullName(ByteBuffer patch) {
 		// get position
 		String pos = DSISysexLoader.getPosition(patch);
 		// get name
 		String name = "";
 		switch (DSISysexLoader.getSynthModel(patch)) {
-			case MODEL_P08_STRING:
+			case MODEL_P08:
 				name = DSISysexLoader.getP08Name(patch);
 				break;
-			case MODEL_REV2_STRING:
+			case MODEL_REV2:
 				name = DSISysexLoader.getREV2Name(patch);
 				break;
 			default:
@@ -278,8 +270,7 @@ public class DSISysexLoader {
 	
 	public static List<ByteBuffer> getBankNames(ByteBuffer sysex) {
 		// 1. check the synth model
-		String synth = DSISysexLoader.getSynthModel(sysex);
-		int sysexSize = synthsSysexSize.get(synth);
+		int sysexSize = DSISysexLoader.getSynthModel(sysex).model_sysex_size;
 		// 2. cut it every x depending on the synth model
 		List<ByteBuffer> presets = new ArrayList<>();
 		while (sysex.hasRemaining()) {
